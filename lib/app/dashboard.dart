@@ -2,12 +2,14 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../auth/login.dart';
 import '../pages/assessment.dart';
 import '../pages/notifikasi.dart';
 import '../pages/profile.dart';
 import '../pages/schedule.dart';
 import '../pages/student.dart';
-
+import '../sidepages/aspect.dart';
+import '../sidepages/assessment.dart';
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -26,15 +28,24 @@ class _DashboardPageState extends State<DashboardPage>
   ];
 
   final List<Map<String, dynamic>> _sidebarItems = [
-    {'title': 'Aspect', 'icon': Icons.category_rounded},
-    {'title': 'Assessment', 'icon': Icons.assignment_rounded},
+    {
+      'title': 'Aspect',
+      'icon': Icons.category_rounded,
+      'page': const AspectPage()
+    },
+    {
+      'title': 'Assessment',
+       'icon': Icons.assignment_rounded, 
+       'page': const AssessmentsidePage()},
     {'title': 'Coach', 'icon': Icons.sports_rounded},
     {'title': 'Department', 'icon': Icons.business_rounded},
     {'title': 'Information', 'icon': Icons.info_rounded},
     {'title': 'Point Rate', 'icon': Icons.star_rate_rounded},
     {'title': 'Schedule', 'icon': Icons.calendar_today_rounded},
     {'title': 'Student', 'icon': Icons.people_rounded},
-    {'title': 'Logout', 'icon': Icons.logout_rounded},
+    {'title': 'Logout', 
+    'icon': Icons.logout_rounded,
+    'page': const LoginPage()},
   ];
 
   @override
@@ -237,8 +248,10 @@ class _DashboardPageState extends State<DashboardPage>
           Navigator.push(
             context,
             PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => const ProfilePage(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  const ProfilePage(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
                 return FadeTransition(opacity: animation, child: child);
               },
               maintainState: true,
@@ -759,7 +772,8 @@ class _DashboardPageState extends State<DashboardPage>
                 child: CircleAvatar(
                   radius: 22,
                   backgroundColor: Colors.grey[200],
-                  child: const Icon(Icons.person, color: Colors.green, size: 28),
+                  child:
+                      const Icon(Icons.person, color: Colors.green, size: 28),
                 ),
               ),
             ),
@@ -779,7 +793,8 @@ class _DashboardPageState extends State<DashboardPage>
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.black12,
                       borderRadius: BorderRadius.circular(12),
@@ -787,7 +802,8 @@ class _DashboardPageState extends State<DashboardPage>
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.workspace_premium, color: Colors.amber, size: 12),
+                        Icon(Icons.workspace_premium,
+                            color: Colors.amber, size: 12),
                         SizedBox(width: 4),
                         Text(
                           'Super Admin',
@@ -815,7 +831,15 @@ class _DashboardPageState extends State<DashboardPage>
       child: Material(
         color: Colors.transparent,
         child: ListTile(
-          onTap: () => Navigator.pop(context),
+          onTap: () {
+            Navigator.pop(context);
+            if (item['page'] != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => item['page']),
+              );
+            }
+          },
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),

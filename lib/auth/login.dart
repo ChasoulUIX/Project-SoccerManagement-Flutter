@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import '../app/dashboard.dart';
+import '../config.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
@@ -12,8 +15,48 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _nohpController = TextEditingController();
+
+  Future<void> _login() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final response = await http.post(
+          Uri.parse('${Config.baseUrl}management/auth/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'name': _nameController.text,
+            'nohp': _nohpController.text,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          // Save token if needed
+          // final token = data['token'];
+          
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DashboardPage(),
+            ),
+          );
+        } else {
+          final errorData = json.decode(response.body);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorData['message'] ?? 'Login failed')),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Network error occurred')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,13 +106,13 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Email Field
+                    // Name Field
                     TextFormField(
-                      controller: _emailController,
+                      controller: _nameController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined, color: Colors.grey[400], size: 20),
+                        hintText: 'Name',
+                        prefixIcon: Icon(Icons.person_outline, color: Colors.grey[400], size: 20),
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey[800]!),
@@ -83,17 +126,23 @@ class _LoginPageState extends State<LoginPage> {
                         filled: true,
                         contentPadding: const EdgeInsets.all(16),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your name';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
 
-                    // Password Field
+                    // Phone Number Field
                     TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
+                      controller: _nohpController,
                       style: const TextStyle(color: Colors.white),
+                      keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
-                        hintText: 'Password',
-                        prefixIcon: Icon(Icons.lock_outline_rounded, color: Colors.grey[400], size: 20),
+                        hintText: 'Phone Number',
+                        prefixIcon: Icon(Icons.phone_outlined, color: Colors.grey[400], size: 20),
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey[800]!),
@@ -107,6 +156,12 @@ class _LoginPageState extends State<LoginPage> {
                         filled: true,
                         contentPadding: const EdgeInsets.all(16),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your phone number';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 8),
 
@@ -132,16 +187,7 @@ class _LoginPageState extends State<LoginPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const DashboardPage(),
-                              ),
-                            );
-                          }
-                        },
+                        onPressed: _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,

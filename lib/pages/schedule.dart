@@ -138,7 +138,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
                 child: const Text(
-                  'Add',
+                  'Tambah',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 13,
