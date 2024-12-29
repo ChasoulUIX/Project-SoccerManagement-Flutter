@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'add/addschedule.dart';
+
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
 
@@ -125,7 +127,10 @@ class _SchedulePageState extends State<SchedulePage> {
               ),
               child: ElevatedButton(
                 onPressed: () {
-                  // Handle add action
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AddSchedulePage()),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'add/addstudent.dart';
+
 class StudentManagementPage extends StatefulWidget {
   const StudentManagementPage({super.key});
 
@@ -129,10 +131,13 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
               ),
             ],
           ),
-          child: ElevatedButton(
-            onPressed: () {
-              // Handle tambah action
-            },
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddStudentPage()),
+                );
+              },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,

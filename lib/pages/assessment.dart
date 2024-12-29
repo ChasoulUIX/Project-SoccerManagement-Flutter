@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'add/addassessment.dart';
+
 class AssessmentPage extends StatefulWidget {
   const AssessmentPage({super.key});
 
@@ -143,7 +145,14 @@ class _AssessmentPageState extends State<AssessmentPage> {
               ),
               child: ElevatedButton(
                 onPressed: () {
-                  // Handle tambah action
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddAssessmentPage(),
+                      fullscreenDialog: false,
+                      maintainState: true,
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
