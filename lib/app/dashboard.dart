@@ -25,10 +25,15 @@ class _DashboardPageState extends State<DashboardPage>
   ];
 
   final List<Map<String, dynamic>> _sidebarItems = [
-    {'title': 'Finance', 'icon': Icons.attach_money_rounded},
-    {'title': 'Reports', 'icon': Icons.bar_chart_rounded},
-    {'title': 'Settings', 'icon': Icons.settings_rounded},
-    {'title': 'Help', 'icon': Icons.help_outline_rounded},
+    {'title': 'Aspect', 'icon': Icons.category_rounded},
+    {'title': 'Assessment', 'icon': Icons.assignment_rounded},
+    {'title': 'Coach', 'icon': Icons.sports_rounded},
+    {'title': 'Department', 'icon': Icons.business_rounded},
+    {'title': 'Information', 'icon': Icons.info_rounded},
+    {'title': 'Point Rate', 'icon': Icons.star_rate_rounded},
+    {'title': 'Schedule', 'icon': Icons.calendar_today_rounded},
+    {'title': 'Student', 'icon': Icons.people_rounded},
+    {'title': 'Logout', 'icon': Icons.logout_rounded},
   ];
 
   @override
@@ -664,120 +669,171 @@ class _DashboardPageState extends State<DashboardPage>
 
   Widget _buildSidebar() {
     return Drawer(
+      backgroundColor: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.grey[900]!,
-              Colors.grey[850]!,
-            ],
+          color: const Color(0xFF1E1E1E),
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(24),
+            bottomRight: Radius.circular(24),
           ),
         ),
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Column(
           children: [
-            DrawerHeader(
+            _buildSidebarHeader(),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _sidebarItems.length,
+                itemBuilder: (context, index) {
+                  final item = _sidebarItems[index];
+                  final isLogout = item['title'] == 'Logout';
+
+                  if (isLogout) {
+                    return Column(
+                      children: [
+                        const Divider(color: Colors.white24),
+                        _buildSidebarItem(item, isLogout: true),
+                      ],
+                    );
+                  }
+
+                  return _buildSidebarItem(item);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.green.shade700,
+            Colors.green.shade900,
+          ],
+        ),
+        borderRadius: const BorderRadius.only(topRight: Radius.circular(24)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black12,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [Colors.green.shade400, Colors.green.shade700],
+                  colors: [Colors.green.shade300, Colors.green.shade500],
                 ),
               ),
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.white,
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.grey[200],
+                  child: const Icon(Icons.person, color: Colors.green, size: 28),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 6,
-                        ),
-                      ],
-                    ),
-                    child: const CircleAvatar(
-                      radius: 25,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person, color: Colors.green, size: 30),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   const Text(
-                    'Coach John',
+                    'ChasoulUIX',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 4),
                   Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.black12,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'Head Coach',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                      ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.workspace_premium, color: Colors.amber, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          'Super Admin',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            ...List.generate(
-              _sidebarItems.length,
-              (index) => Container(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      _sidebarItems[index]['icon'],
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                  title: Text(
-                    _sidebarItems[index]['title'],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.white,
-                    size: 12,
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem(Map<String, dynamic> item, {bool isLogout = false}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          onTap: () => Navigator.pop(context),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          tileColor: isLogout ? Colors.red.withOpacity(0.1) : null,
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isLogout
+                  ? Colors.red.withOpacity(0.2)
+                  : Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              item['icon'],
+              color: isLogout ? Colors.red : Colors.white,
+              size: 20,
+            ),
+          ),
+          title: Text(
+            item['title'],
+            style: TextStyle(
+              color: isLogout ? Colors.red : Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          trailing: Icon(
+            Icons.arrow_forward_ios,
+            color: isLogout ? Colors.red : Colors.white54,
+            size: 14,
+          ),
         ),
       ),
     );

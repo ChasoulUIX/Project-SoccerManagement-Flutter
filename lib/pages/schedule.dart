@@ -75,22 +75,74 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
       children: [
-        const Text(
-          'Schedule',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.calendar_today, color: Colors.white, size: 18),
-          onPressed: () {
-            // Show calendar
-          },
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: TextField(
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'Search schedule...',
+                    hintStyle: TextStyle(
+                      color: Colors.white.withOpacity(0.4),
+                      fontSize: 13,
+                    ),
+                    border: InputBorder.none,
+                    icon: Icon(
+                      Icons.search,
+                      color: Colors.white.withOpacity(0.4),
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.green.shade600, Colors.green.shade400],
+                ),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  // Handle add action
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                child: const Text(
+                  'Add',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

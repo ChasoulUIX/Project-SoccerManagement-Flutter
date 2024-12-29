@@ -82,57 +82,73 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
-          Icon(Icons.search, size: 18, color: Colors.white.withOpacity(0.5)),
-          const SizedBox(width: 8),
-          Expanded(
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
             child: TextField(
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Colors.white, fontSize: 13),
               decoration: InputDecoration(
+                isDense: true,
                 hintText: 'Search students...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                hintStyle: TextStyle(
+                  color: Colors.white.withOpacity(0.4),
+                  fontSize: 13,
+                ),
                 border: InputBorder.none,
+                icon: Icon(
+                  Icons.search,
+                  color: Colors.white.withOpacity(0.4),
+                  size: 18,
+                ),
               ),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
-          Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            margin: const EdgeInsets.only(right: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(14),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          height: 36,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.green.shade600, Colors.green.shade400],
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedFilter,
-                icon: Icon(Icons.keyboard_arrow_down,
-                    color: Colors.white.withOpacity(0.5), size: 16),
-                dropdownColor: const Color(0xFF1A1A1A),
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-                items: ['All', 'Active', 'Inactive'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() => _selectedFilter = newValue!);
-                },
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.green.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ElevatedButton(
+            onPressed: () {
+              // Handle tambah action
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            child: const Text(
+              'Tambah',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -242,9 +258,40 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white, size: 18),
-            onPressed: () {},
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, color: Colors.white, size: 18),
+            color: const Color(0xFF1A1A1A),
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Edit', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Delete', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+            onSelected: (String value) {
+              if (value == 'edit') {
+                // TODO: Implement edit functionality
+                print('Edit clicked for ${student['name']}');
+              } else if (value == 'delete') {
+                // TODO: Implement delete functionality
+                print('Delete clicked for ${student['name']}');
+              }
+            },
           ),
         ],
       ),

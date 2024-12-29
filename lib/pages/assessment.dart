@@ -72,22 +72,95 @@ class _AssessmentPageState extends State<AssessmentPage> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
       children: [
-        const Text(
-          'Assessments',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.filter_list, color: Colors.white, size: 20),
-          onPressed: () {
-            // Show filter options
-          },
+        // Row(
+        //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        //   children: [
+        //     const Text(
+        //       'Assessments',
+        //       style: TextStyle(
+        //         color: Colors.white,
+        //         fontSize: 20,
+        //         fontWeight: FontWeight.bold,
+        //       ),
+        //     ),
+        //     IconButton(
+        //       icon:
+        //           const Icon(Icons.filter_list, color: Colors.white, size: 20),
+        //       onPressed: () {
+        //         // Show filter options
+        //       },
+        //     ),
+        //   ],
+        // ),
+        // const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: TextField(
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'Cari assessment...',
+                    hintStyle: TextStyle(
+                      color: Colors.white.withOpacity(0.4),
+                      fontSize: 13,
+                    ),
+                    border: InputBorder.none,
+                    icon: Icon(
+                      Icons.search,
+                      color: Colors.white.withOpacity(0.4),
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.green.shade600, Colors.green.shade400],
+                ),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  // Handle tambah action
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                child: const Text(
+                  'Tambah',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -167,79 +240,110 @@ class _AssessmentPageState extends State<AssessmentPage> {
   }
 
   Widget _buildAssessmentCard(Map<String, dynamic> assessment) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
+    return Dismissible(
+      key: UniqueKey(),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        // Return false to prevent dismissal
+        return false;
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20.0),
+        color: Colors.transparent,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              onPressed: () {
+                // Handle edit action
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () {
+                // Handle delete action
+              },
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                assessment['student'],
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${assessment['score']}%',
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  assessment['student'],
                   style: const TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
+                    color: Colors.white,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(Icons.category,
-                  size: 12, color: Colors.white.withOpacity(0.7)),
-              const SizedBox(width: 4),
-              Text(
-                assessment['category'],
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 11,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${assessment['score']}%',
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Icon(Icons.calendar_today,
-                  size: 12, color: Colors.white.withOpacity(0.7)),
-              const SizedBox(width: 4),
-              Text(
-                assessment['date'],
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            assessment['notes'],
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 12,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.category,
+                    size: 12, color: Colors.white.withOpacity(0.7)),
+                const SizedBox(width: 4),
+                Text(
+                  assessment['category'],
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(Icons.calendar_today,
+                    size: 12, color: Colors.white.withOpacity(0.7)),
+                const SizedBox(width: 4),
+                Text(
+                  assessment['date'],
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              assessment['notes'],
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
