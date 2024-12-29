@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../pages/assessment.dart';
+import '../pages/notifikasi.dart';
 import '../pages/profile.dart';
 import '../pages/schedule.dart';
 import '../pages/student.dart';
@@ -199,7 +200,12 @@ class _DashboardPageState extends State<DashboardPage>
             ),
           ],
         ),
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NotifikasiPage()),
+          );
+        },
         padding: const EdgeInsets.all(6),
         constraints: const BoxConstraints(
           minWidth: 32,
