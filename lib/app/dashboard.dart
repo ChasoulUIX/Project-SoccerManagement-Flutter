@@ -236,7 +236,14 @@ class _DashboardPageState extends State<DashboardPage>
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ProfilePage()),
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => const ProfilePage(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              maintainState: true,
+              opaque: false,
+            ),
           );
         },
         padding: const EdgeInsets.all(6),
