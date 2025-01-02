@@ -15,33 +15,42 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _nohpController = TextEditingController();
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       try {
         final response = await http.post(
-          Uri.parse('${Config.baseUrl}management/auth/login'),
+          Uri.parse('${Config.baseUrl}auth/management/login'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({
-            'name': _nameController.text,
+            'email': _emailController.text,
             'nohp': _nohpController.text,
           }),
         );
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
-          // Save token if needed
-          // final token = data['token'];
           
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const DashboardPage(),
-            ),
-          );
+          if (data['success'] == true) {
+            // Save token
+            final token = data['token'];
+            // TODO: Store token securely
+            
+            if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DashboardPage(),
+              ),
+            );
+          } else {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(data['message'] ?? 'Login failed')),
+            );
+          }
         } else {
           final errorData = json.decode(response.body);
           if (!mounted) return;
@@ -52,7 +61,7 @@ class _LoginPageState extends State<LoginPage> {
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Network error occurred')),
+          const SnackBar(content: Text('Terjadi kesalahan pada server')),
         );
       }
     }
@@ -106,13 +115,13 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Name Field
+                    // Email Field
                     TextFormField(
-                      controller: _nameController,
+                      controller: _emailController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'Name',
-                        prefixIcon: Icon(Icons.person_outline, color: Colors.grey[400], size: 20),
+                        hintText: 'Email',
+                        prefixIcon: Icon(Icons.email_outlined, color: Colors.grey[400], size: 20),
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey[800]!),
@@ -128,7 +137,10 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
+                          return 'Please enter your email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Please enter a valid email';
                         }
                         return null;
                       },
