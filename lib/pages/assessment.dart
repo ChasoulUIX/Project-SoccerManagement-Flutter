@@ -79,6 +79,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
             );
           }
         } else {
+          debugPrint('Delete failed with status: ${response.statusCode}');
           throw Exception('Failed to delete assessment');
         }
       }
@@ -304,6 +305,8 @@ class _AssessmentPageState extends State<AssessmentPage> {
   }
 
   Widget _buildAssessmentCard(Map<String, dynamic> assessment) {
+    debugPrint('Assessment data: $assessment');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -336,7 +339,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${assessment['score']}%',
+                        '${assessment['point']}%',
                         style: const TextStyle(
                           color: Colors.green,
                           fontSize: 12,
@@ -434,8 +437,16 @@ class _AssessmentPageState extends State<AssessmentPage> {
                   ),
                 );
 
-                if (confirmed == true && assessment['id'] != null) {
-                  await _deleteAssessment(assessment['id']);
+                if (confirmed == true) {
+                  final assessmentId =
+                      assessment['id_assessment'] ?? assessment['id'];
+                  if (assessmentId != null) {
+                    await _deleteAssessment(int.parse(assessmentId.toString()));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Invalid assessment ID')),
+                    );
+                  }
                 }
               }
             },
@@ -446,7 +457,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
   }
 
   Future<void> _showEditModal(Map<String, dynamic> assessment) async {
-    final assessmentId = assessment['id'];
+    final assessmentId = assessment['id_assessment'] ?? assessment['id'];
     if (assessmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invalid assessment ID')),
@@ -454,14 +465,32 @@ class _AssessmentPageState extends State<AssessmentPage> {
       return;
     }
 
+    // Map aspect_sub IDs to category names
+    final aspectToCategory = {
+      1: 'Technical',
+      2: 'Physical',
+      3: 'Tactical',
+      4: 'Mental',
+    };
+
+    // Initialize controllers with existing data
     final formKey = GlobalKey<FormState>();
-    final scoreController =
-        TextEditingController(text: assessment['score'].toString());
-    final notesController = TextEditingController(text: assessment['notes']);
-    String selectedCategory = assessment['category'] ?? 'Technical';
-    DateTime selectedDate = assessment['date'] != null
-        ? DateTime.parse(assessment['date'])
-        : DateTime.now();
+    final scoreController = TextEditingController(
+        text: (assessment['point'] ?? assessment['score'])?.toString() ?? '');
+    final notesController = TextEditingController(
+        text: assessment['ket'] ?? assessment['notes'] ?? '');
+
+    // Convert aspect_sub ID to category name
+    String selectedCategory = aspectToCategory[assessment['id_aspect_sub']] ??
+        assessment['category'] ??
+        'Technical';
+
+    // Parse date from assessment
+    DateTime selectedDate = assessment['date_assessment'] != null
+        ? DateTime.parse(assessment['date_assessment'])
+        : assessment['date'] != null
+            ? DateTime.parse(assessment['date'])
+            : DateTime.now();
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -551,6 +580,16 @@ class _AssessmentPageState extends State<AssessmentPage> {
                 TextButton(
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
+                      // Validate that score is a valid integer before parsing
+                      if (scoreController.text.isEmpty ||
+                          !RegExp(r'^\d+$').hasMatch(scoreController.text)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Please enter a valid score number')),
+                        );
+                        return;
+                      }
                       Navigator.pop(context, {
                         'score': int.parse(scoreController.text),
                         'category': selectedCategory,
@@ -579,14 +618,36 @@ class _AssessmentPageState extends State<AssessmentPage> {
       final token = await _storage.read(key: 'jwt_token');
       if (token == null) throw Exception('No auth token found');
 
+      // Map category names to their corresponding IDs
+      final categoryToId = {
+        'Technical': 1,
+        'Physical': 2,
+        'Tactical': 3,
+        'Mental': 4,
+      };
+
+      // Updated to match database column names and data types
+      final updateData = {
+        'point': data['score'],
+        'id_aspect_sub':
+            categoryToId[data['category']] ?? 1, // Convert category name to ID
+        'ket': data['notes'],
+        'date_assessment': data['date'],
+      };
+
+      debugPrint('Updating assessment $id with data: $updateData');
+
       final response = await http.put(
         Uri.parse('${Config.baseUrl}assessments/$id'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: json.encode(data),
+        body: json.encode(updateData),
       );
+
+      debugPrint('Update response status: ${response.statusCode}');
+      debugPrint('Update response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
@@ -605,6 +666,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
         throw Exception('Failed to update assessment');
       }
     } catch (e) {
+      debugPrint('Error updating assessment: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
