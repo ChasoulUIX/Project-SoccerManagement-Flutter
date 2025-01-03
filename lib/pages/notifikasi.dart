@@ -19,7 +19,7 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
     {
       'title': 'Penilaian Baru',
       'message': 'Anda mendapat penilaian baru dari Coach Ahmad',
-      'time': '5 jam yang lalu', 
+      'time': '5 jam yang lalu',
       'isRead': true,
       'type': 'assessment'
     },
@@ -61,7 +61,8 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: _notifications.length,
-        itemBuilder: (context, index) => _buildNotificationCard(_notifications[index]),
+        itemBuilder: (context, index) =>
+            _buildNotificationCard(_notifications[index]),
       ),
     );
   }
@@ -69,91 +70,105 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
   Widget _buildNotificationCard(Map<String, dynamic> notification) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: notification['isRead'] 
-          ? Colors.white.withOpacity(0.05)
-          : Colors.green.withOpacity(0.1),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.1),
+            Colors.white.withOpacity(0.05)
+          ],
+        ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: notification['isRead']
-            ? Colors.white.withOpacity(0.1)
-            : Colors.green.withOpacity(0.3),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            _getNotificationIcon(notification['type']),
-            color: Colors.green,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          notification['title'],
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: notification['isRead'] ? FontWeight.normal : FontWeight.bold,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              notification['message'],
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 12,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: _getNotificationColor(notification['type']),
               ),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(height: 4),
-            Text(
-              notification['time'],
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
-                fontSize: 11,
-              ),
+            child: Icon(
+              _getNotificationIcon(notification['type']),
+              color: Colors.white,
+              size: 16,
             ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: Icon(
-            Icons.more_vert,
-            color: Colors.white.withOpacity(0.7),
-            size: 20,
           ),
-          color: const Color(0xFF1A1A1A),
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'mark',
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Text('Tandai dibaca', style: TextStyle(color: Colors.white)),
-                ],
-              ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  notification['title'],
+                  style: TextStyle(
+                    color: Colors.grey[100],
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  notification['message'],
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                  SizedBox(width: 8),
-                  Text('Hapus', style: TextStyle(color: Colors.red)),
-                ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  notification['time'],
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 4),
+              Text(
+                notification['isRead'] ? 'Read' : 'Unread',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 10,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  List<Color> _getNotificationColor(String type) {
+    switch (type) {
+      case 'schedule':
+        return [Colors.blue.shade400, Colors.blue.shade700];
+      case 'assessment':
+        return [Colors.orange.shade400, Colors.orange.shade700];
+      case 'announcement':
+        return [Colors.purple.shade400, Colors.purple.shade700];
+      default:
+        return [Colors.green.shade400, Colors.green.shade700];
+    }
   }
 
   IconData _getNotificationIcon(String type) {
