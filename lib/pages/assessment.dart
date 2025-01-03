@@ -28,7 +28,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
   Future<void> _loadAssessments() async {
     try {
       final token = await _storage.read(key: 'jwt_token');
-      
+
       if (token != null) {
         final response = await http.get(
           Uri.parse('${Config.baseUrl}assessments'),
@@ -58,7 +58,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
   Future<void> _deleteAssessment(int id) async {
     try {
       final token = await _storage.read(key: 'jwt_token');
-      
+
       if (token != null) {
         final response = await http.delete(
           Uri.parse('${Config.baseUrl}assessments/$id'),
@@ -69,20 +69,23 @@ class _AssessmentPageState extends State<AssessmentPage> {
         );
 
         if (response.statusCode == 200) {
-          _loadAssessments(); // Reload after delete
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Assessment berhasil dihapus')),
-          );
+          final data = json.decode(response.body);
+          if (data['success']) {
+            await _loadAssessments();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content:
+                      Text(data['message'] ?? 'Assessment berhasil dihapus')),
+            );
+          }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal menghapus assessment')),
-          );
+          throw Exception('Failed to delete assessment');
         }
       }
     } catch (e) {
       debugPrint('Error deleting assessment: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Terjadi kesalahan')),
+        const SnackBar(content: Text('Gagal menghapus assessment')),
       );
     }
   }
@@ -115,7 +118,8 @@ class _AssessmentPageState extends State<AssessmentPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) => _buildAssessmentCard(_assessments[index]),
+                        (context, index) =>
+                            _buildAssessmentCard(_assessments[index]),
                         childCount: _assessments.length,
                       ),
                     ),
@@ -240,9 +244,12 @@ class _AssessmentPageState extends State<AssessmentPage> {
   }
 
   Widget _buildAssessmentStats() {
-    final avgScore = _assessments.isEmpty 
+    final avgScore = _assessments.isEmpty
         ? 0.0
-        : _assessments.map((a) => (a['score'] ?? 0) as num).reduce((a, b) => a + b) / _assessments.length;
+        : _assessments
+                .map((a) => (a['score'] ?? 0) as num)
+                .reduce((a, b) => a + b) /
+            _assessments.length;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -297,113 +304,310 @@ class _AssessmentPageState extends State<AssessmentPage> {
   }
 
   Widget _buildAssessmentCard(Map<String, dynamic> assessment) {
-    return Dismissible(
-      key: Key(assessment['id'].toString()),
-      direction: DismissDirection.endToStart,
-      confirmDismiss: (direction) async {
-        return await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Konfirmasi'),
-            content: const Text('Yakin ingin menghapus assessment ini?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Batal'),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      assessment['student_name'] ?? 'Unknown',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${assessment['score']}%',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.category,
+                        size: 12, color: Colors.white.withOpacity(0.7)),
+                    const SizedBox(width: 4),
+                    Text(
+                      assessment['category'] ?? 'Unknown',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.calendar_today,
+                        size: 12, color: Colors.white.withOpacity(0.7)),
+                    const SizedBox(width: 4),
+                    Text(
+                      assessment['date'] ?? 'Unknown',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  assessment['notes'] ?? '',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white, size: 18),
+            color: const Color(0xFF1A1A1A),
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text('Edit', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
               ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                  _deleteAssessment(assessment['id']);
-                },
-                child: const Text('Hapus'),
+              const PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red, size: 18),
+                    SizedBox(width: 8),
+                    Text('Delete', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
               ),
             ],
+            onSelected: (String value) async {
+              if (value == 'edit') {
+                await _showEditModal(assessment);
+              } else if (value == 'delete') {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    title: const Text('Konfirmasi',
+                        style: TextStyle(color: Colors.white)),
+                    content: const Text('Yakin ingin menghapus assessment ini?',
+                        style: TextStyle(color: Colors.white)),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Batal'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Hapus',
+                            style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true && assessment['id'] != null) {
+                  await _deleteAssessment(assessment['id']);
+                }
+              }
+            },
           ),
-        );
-      },
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20.0),
-        color: Colors.red,
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  assessment['student_name'] ?? 'Unknown',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${assessment['score']}%',
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.category,
-                    size: 12, color: Colors.white.withOpacity(0.7)),
-                const SizedBox(width: 4),
-                Text(
-                  assessment['category'] ?? 'Unknown',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Icon(Icons.calendar_today,
-                    size: 12, color: Colors.white.withOpacity(0.7)),
-                const SizedBox(width: 4),
-                Text(
-                  assessment['date'] ?? 'Unknown',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              assessment['notes'] ?? '',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
+  }
+
+  Future<void> _showEditModal(Map<String, dynamic> assessment) async {
+    final assessmentId = assessment['id'];
+    if (assessmentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid assessment ID')),
+      );
+      return;
+    }
+
+    final formKey = GlobalKey<FormState>();
+    final scoreController =
+        TextEditingController(text: assessment['score'].toString());
+    final notesController = TextEditingController(text: assessment['notes']);
+    String selectedCategory = assessment['category'] ?? 'Technical';
+    DateTime selectedDate = assessment['date'] != null
+        ? DateTime.parse(assessment['date'])
+        : DateTime.now();
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1A1A1A),
+              title: const Text('Edit Assessment',
+                  style: TextStyle(color: Colors.white, fontSize: 16)),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: scoreController,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Score',
+                          labelStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 13),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Colors.white.withOpacity(0.1)),
+                          ),
+                        ),
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required field' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedCategory,
+                        dropdownColor: const Color(0xFF1E1E1E),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
+                        decoration: InputDecoration(
+                          labelText: 'Category',
+                          labelStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 13),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Colors.white.withOpacity(0.1)),
+                          ),
+                        ),
+                        items: ['Technical', 'Physical', 'Tactical', 'Mental']
+                            .map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (value) =>
+                            setState(() => selectedCategory = value!),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: notesController,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          labelText: 'Notes',
+                          labelStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 13),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: Colors.white.withOpacity(0.1)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      Navigator.pop(context, {
+                        'score': int.parse(scoreController.text),
+                        'category': selectedCategory,
+                        'notes': notesController.text,
+                        'date': selectedDate.toIso8601String(),
+                      });
+                    }
+                  },
+                  child:
+                      const Text('Save', style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      await _updateAssessment(assessmentId, result);
+    }
+  }
+
+  Future<void> _updateAssessment(dynamic id, Map<String, dynamic> data) async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) throw Exception('No auth token found');
+
+      final response = await http.put(
+        Uri.parse('${Config.baseUrl}assessments/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(data),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success']) {
+          await _loadAssessments();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(responseData['message'] ??
+                    'Assessment berhasil diperbarui')),
+          );
+        } else {
+          throw Exception(
+              responseData['message'] ?? 'Gagal memperbarui assessment');
+        }
+      } else {
+        throw Exception('Failed to update assessment');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
   }
 }

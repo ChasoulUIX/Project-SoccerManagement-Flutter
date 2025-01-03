@@ -192,6 +192,15 @@ class _DashboardPageState extends State<DashboardPage>
     }
   }
 
+  Future<void> _handleRefresh() async {
+    await Future.wait([
+      _loadUserData(),
+      _loadAssessmentsCount(),
+      _loadStudentsCount(),
+      _loadTodaySessions(),
+    ]);
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -456,17 +465,23 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Widget _buildOverviewTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildWelcomeCard(),
-          const SizedBox(height: 16),
-          _buildQuickStats(),
-          const SizedBox(height: 16),
-          _buildRecentActivities(),
-        ],
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: Colors.green,
+      backgroundColor: Colors.white,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildWelcomeCard(),
+            const SizedBox(height: 16),
+            _buildQuickStats(),
+            const SizedBox(height: 16),
+            _buildRecentActivities(),
+          ],
+        ),
       ),
     );
   }
