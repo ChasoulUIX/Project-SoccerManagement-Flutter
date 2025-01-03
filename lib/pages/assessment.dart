@@ -248,7 +248,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
     final avgScore = _assessments.isEmpty
         ? 0.0
         : _assessments
-                .map((a) => (a['score'] ?? 0) as num)
+                .map((a) => (a['point'] ?? 0) as num)
                 .reduce((a, b) => a + b) /
             _assessments.length;
     return Container(
@@ -271,9 +271,9 @@ class _AssessmentPageState extends State<AssessmentPage> {
   int _getMonthlyCount() {
     final now = DateTime.now();
     return _assessments.where((a) {
-      if (a['date'] == null) return false;
+      if (a['date_assessment'] == null) return false;
       try {
-        final date = DateTime.parse(a['date'].toString());
+        final date = DateTime.parse(a['date_assessment'].toString());
         return date.year == now.year && date.month == now.month;
       } catch (e) {
         return false;
@@ -618,7 +618,6 @@ class _AssessmentPageState extends State<AssessmentPage> {
       final token = await _storage.read(key: 'jwt_token');
       if (token == null) throw Exception('No auth token found');
 
-      // Map category names to their corresponding IDs
       final categoryToId = {
         'Technical': 1,
         'Physical': 2,
@@ -626,13 +625,15 @@ class _AssessmentPageState extends State<AssessmentPage> {
         'Mental': 4,
       };
 
+      // Format the date to YYYY-MM-DD
+      final formattedDate = data['date'].split('T')[0];
+
       // Updated to match database column names and data types
       final updateData = {
         'point': data['score'],
-        'id_aspect_sub':
-            categoryToId[data['category']] ?? 1, // Convert category name to ID
+        'id_aspect_sub': categoryToId[data['category']] ?? 1,
         'ket': data['notes'],
-        'date_assessment': data['date'],
+        'date_assessment': formattedDate,
       };
 
       debugPrint('Updating assessment $id with data: $updateData');
