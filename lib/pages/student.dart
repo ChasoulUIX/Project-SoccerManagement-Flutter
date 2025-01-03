@@ -431,7 +431,8 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
 
   Widget _buildQuickStats() {
     final totalStudents = _students.length;
-    final activeStudents = _students.where((s) => s['status'] == true).length;
+    final activeStudents =
+        _students.where((s) => s['status'] == 1 || s['status'] == true).length;
     final inactiveStudents = totalStudents - activeStudents;
 
     return Row(
@@ -478,6 +479,8 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
   }
 
   Widget _buildStudentCard(Map<String, dynamic> student) {
+    bool isActive = student['status'] == 1 || student['status'] == true;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -519,15 +522,13 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color:
-                        (student['status'] == true ? Colors.green : Colors.red)
-                            .withOpacity(0.2),
+                        (isActive ? Colors.green : Colors.red).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    student['status'] == true ? 'Active' : 'Inactive',
+                    isActive ? 'Active' : 'Inactive',
                     style: TextStyle(
-                      color:
-                          student['status'] == true ? Colors.green : Colors.red,
+                      color: isActive ? Colors.green : Colors.red,
                       fontSize: 11,
                     ),
                   ),

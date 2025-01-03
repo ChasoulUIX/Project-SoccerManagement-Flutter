@@ -66,6 +66,7 @@ class _DashboardPageState extends State<DashboardPage>
   String _totalAssessments = '';
   String _totalStudents = '0';
   String _todaySessions = '0';
+  List<Map<String, dynamic>> _recentActivities = [];
 
   @override
   void initState() {
@@ -75,6 +76,7 @@ class _DashboardPageState extends State<DashboardPage>
     _loadAssessmentsCount();
     _loadStudentsCount();
     _loadTodaySessions();
+    _loadRecentActivities();
   }
 
   Future<void> _loadUserData() async {
@@ -192,12 +194,123 @@ class _DashboardPageState extends State<DashboardPage>
     }
   }
 
+  Future<void> _loadRecentActivities() async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) return;
+
+      // Get data from multiple endpoints
+      final futures = await Future.wait([
+        http.get(Uri.parse('${Config.baseUrl}assessments'), headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json'
+        }),
+        http.get(Uri.parse('${Config.baseUrl}student'), headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json'
+        }),
+        http.get(Uri.parse('${Config.baseUrl}schedules'), headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json'
+        }),
+      ]);
+
+      final activities = <Map<String, dynamic>>[];
+
+      // Process assessments
+      if (futures[0].statusCode == 200) {
+        final data = json.decode(futures[0].body);
+        if (data['data'] != null) {
+          for (var assessment in data['data']) {
+            activities.add({
+              'type': 'assessment',
+              'title': assessment['name'] ?? 'Unknown Assessment',
+              'description': assessment['description'] ?? 'No description',
+              'status': assessment['status'] ?? 'Updated',
+              'created_at':
+                  assessment['created_at'] ?? DateTime.now().toIso8601String(),
+              'updated_at': assessment['updated_at'] ??
+                  assessment['created_at'] ??
+                  DateTime.now().toIso8601String(),
+              'timestamp': DateTime.tryParse(assessment['updated_at'] ??
+                      assessment['created_at'] ??
+                      '') ??
+                  DateTime.now(),
+            });
+          }
+        }
+      }
+
+      // Process students
+      if (futures[1].statusCode == 200) {
+        final data = json.decode(futures[1].body);
+        if (data['data'] != null) {
+          for (var student in data['data']) {
+            activities.add({
+              'type': 'student',
+              'title': student['name'] ?? 'Unknown Student',
+              'description':
+                  '${student['email'] ?? 'No email'} - ${student['nohp'] ?? 'No phone'}',
+              'status': student['status'] ?? 'Updated',
+              'created_at':
+                  student['created_at'] ?? DateTime.now().toIso8601String(),
+              'updated_at': student['updated_at'] ??
+                  student['created_at'] ??
+                  DateTime.now().toIso8601String(),
+              'timestamp': DateTime.tryParse(
+                      student['updated_at'] ?? student['created_at'] ?? '') ??
+                  DateTime.now(),
+            });
+          }
+        }
+      }
+
+      // Process schedules
+      if (futures[2].statusCode == 200) {
+        final data = json.decode(futures[2].body);
+        if (data['data'] != null) {
+          for (var schedule in data['data']) {
+            activities.add({
+              'type': 'schedule',
+              'title': schedule['title'] ?? 'Unknown Schedule',
+              'description': schedule['description'] ?? 'No description',
+              'status': schedule['status'] ?? 'Updated',
+              'created_at':
+                  schedule['created_at'] ?? DateTime.now().toIso8601String(),
+              'updated_at': schedule['updated_at'] ??
+                  schedule['created_at'] ??
+                  DateTime.now().toIso8601String(),
+              'timestamp': DateTime.tryParse(
+                      schedule['updated_at'] ?? schedule['created_at'] ?? '') ??
+                  DateTime.now(),
+            });
+          }
+        }
+      }
+
+      // Sort activities by timestamp in descending order (newest first)
+      activities.sort((a, b) {
+        final dateA = a['timestamp'] as DateTime;
+        final dateB = b['timestamp'] as DateTime;
+        return dateB.compareTo(dateA);
+      });
+
+      // Take only the latest 10 activities
+      setState(() {
+        _recentActivities = activities.take(10).toList();
+      });
+    } catch (e) {
+      debugPrint('Error loading recent activities: $e');
+    }
+  }
+
   Future<void> _handleRefresh() async {
     await Future.wait([
       _loadUserData(),
       _loadAssessmentsCount(),
       _loadStudentsCount(),
       _loadTodaySessions(),
+      _loadRecentActivities(),
     ]);
   }
 
@@ -714,89 +827,157 @@ class _DashboardPageState extends State<DashboardPage>
           ],
         ),
         const SizedBox(height: 8),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: 5,
-          itemBuilder: (context, index) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.1),
-                    Colors.white.withOpacity(0.05)
-                  ],
+        _recentActivities.isEmpty
+            ? Center(
+                child: Text(
+                  'No recent activities',
+                  style: TextStyle(color: Colors.grey[400]),
                 ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _recentActivities.length,
+                itemBuilder: (context, index) {
+                  final activity = _recentActivities[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Colors.green.shade400, Colors.green.shade700],
+                        colors: [
+                          Colors.white.withOpacity(0.1),
+                          Colors.white.withOpacity(0.05)
+                        ],
                       ),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
                     ),
-                    child: const Icon(
-                      Icons.sports_soccer,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(
-                          'New Student Enrolled',
-                          style: TextStyle(
-                            color: Colors.grey[100],
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: _getActivityColor(activity['type']),
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            _getActivityIcon(activity['type']),
+                            color: Colors.white,
+                            size: 16,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'ChasoulUIX joined Basic Training Course',
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 12,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                activity['title'] ?? '',
+                                style: TextStyle(
+                                  color: Colors.grey[100],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                activity['description'] ?? '',
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _formatTimeAgo(activity['updated_at']),
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              (activity['status'] ?? '').toString(),
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 10,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '2h ago',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
-            );
-          },
-        ),
       ],
     );
+  }
+
+  List<Color> _getActivityColor(String type) {
+    switch (type) {
+      case 'assessment':
+        return [Colors.blue.shade400, Colors.blue.shade700];
+      case 'student':
+        return [Colors.orange.shade400, Colors.orange.shade700];
+      case 'schedule':
+        return [Colors.purple.shade400, Colors.purple.shade700];
+      default:
+        return [Colors.green.shade400, Colors.green.shade700];
+    }
+  }
+
+  IconData _getActivityIcon(String type) {
+    switch (type) {
+      case 'assessment':
+        return Icons.assignment_rounded;
+      case 'student':
+        return Icons.person_rounded;
+      case 'schedule':
+        return Icons.calendar_today_rounded;
+      default:
+        return Icons.circle;
+    }
+  }
+
+  String _formatTimeAgo(String? dateStr) {
+    if (dateStr == null) return '';
+
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return '';
+
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'just now';
+    }
   }
 
   Widget _buildComingSoonTab(String tabName) {
