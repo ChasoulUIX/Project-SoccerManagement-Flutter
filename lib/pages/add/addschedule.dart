@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../config.dart';
 
 class AddSchedulePage extends StatefulWidget {
   const AddSchedulePage({super.key});
@@ -9,16 +13,19 @@ class AddSchedulePage extends StatefulWidget {
 
 class _AddSchedulePageState extends State<AddSchedulePage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
+  final _storage = const FlutterSecureStorage();
+  
+  final TextEditingController _nameScheduleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   TimeOfDay? _selectedStartTime;
   TimeOfDay? _selectedEndTime;
   String? _selectedDay;
+  int _statusSchedule = 1; // Default status
   final List<String> _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   @override
   void dispose() {
-    _titleController.dispose();
+    _nameScheduleController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -52,6 +59,53 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
     }
   }
 
+  Future<void> _saveSchedule() async {
+    if (_formKey.currentState!.validate() &&
+        _selectedStartTime != null &&
+        _selectedEndTime != null) {
+      try {
+        final token = await _storage.read(key: 'jwt_token');
+
+        // Combine selected day and times into a date string
+        final now = DateTime.now();
+        final dayIndex = _days.indexOf(_selectedDay!);
+        final scheduleDate = now.add(Duration(days: (dayIndex - now.weekday + 1) % 7));
+        
+        final dateSchedule = DateTime(
+          scheduleDate.year,
+          scheduleDate.month,
+          scheduleDate.day,
+          _selectedStartTime!.hour,
+          _selectedStartTime!.minute
+        );
+
+        final response = await http.post(
+          Uri.parse('${Config.baseUrl}schedules'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({
+            'name_schedule': _nameScheduleController.text,
+            'date_schedule': dateSchedule.toIso8601String(),
+            'status_schedule': _statusSchedule,
+            'description': _descriptionController.text,
+          }),
+        );
+
+        if (response.statusCode == 201) {
+          Navigator.pop(context);
+        } else {
+          throw Exception('Failed to create schedule');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save schedule')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,10 +129,10 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
-                controller: _titleController,
+                controller: _nameScheduleController,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
-                  labelText: 'Schedule Title',
+                  labelText: 'Schedule Name',
                   labelStyle: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
                   border: OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
@@ -93,7 +147,7 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter schedule title';
+                    return 'Please enter schedule name';
                   }
                   return null;
                 },
@@ -234,14 +288,7 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate() &&
-                        _selectedStartTime != null &&
-                        _selectedEndTime != null) {
-                      // TODO: Implement save schedule logic
-                      Navigator.pop(context);
-                    }
-                  },
+                  onPressed: _saveSchedule,
                   child: const Text(
                     'Save Schedule',
                     style: TextStyle(

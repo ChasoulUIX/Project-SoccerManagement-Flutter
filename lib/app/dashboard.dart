@@ -63,12 +63,18 @@ class _DashboardPageState extends State<DashboardPage>
   String _email = '';
   String _nohp = '';
   String _token = '';
+  String _totalAssessments = '';
+  String _totalStudents = '0';
+  String _todaySessions = '0';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
     _loadUserData();
+    _loadAssessmentsCount();
+    _loadStudentsCount();
+    _loadTodaySessions();
   }
 
   Future<void> _loadUserData() async {
@@ -105,6 +111,84 @@ class _DashboardPageState extends State<DashboardPage>
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _loadAssessmentsCount() async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse('${Config.baseUrl}assessments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['data'] != null) {
+          setState(() {
+            _totalAssessments = responseData['data'].length.toString();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading assessments count: $e');
+    }
+  }
+
+  Future<void> _loadStudentsCount() async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse('${Config.baseUrl}student'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['data'] != null) {
+          setState(() {
+            _totalStudents = responseData['data'].length.toString();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading students count: $e');
+    }
+  }
+
+  Future<void> _loadTodaySessions() async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse('${Config.baseUrl}schedules'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['data'] != null) {
+          setState(() {
+            _todaySessions = responseData['data'].length.toString();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading schedules count: $e');
     }
   }
 
@@ -503,19 +587,19 @@ class _DashboardPageState extends State<DashboardPage>
       children: [
         _buildStatsCard(
           'Active Courses',
-          '12',
+          _totalAssessments,
           Icons.school_rounded,
           [Colors.blue.shade400, Colors.blue.shade700],
         ),
         _buildStatsCard(
           'Total Students',
-          '156',
+          _totalStudents,
           Icons.groups_rounded,
           [Colors.orange.shade400, Colors.orange.shade700],
         ),
         _buildStatsCard(
           'Sessions Today',
-          '8',
+          _todaySessions,
           Icons.calendar_today_rounded,
           [Colors.purple.shade400, Colors.purple.shade700],
         ),

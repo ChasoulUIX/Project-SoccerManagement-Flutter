@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../config.dart';
 
 class AddAssessmentPage extends StatefulWidget {
   const AddAssessmentPage({super.key});
@@ -9,25 +13,40 @@ class AddAssessmentPage extends StatefulWidget {
 
 class _AddAssessmentPageState extends State<AddAssessmentPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  final _storage = const FlutterSecureStorage();
+  
+  final TextEditingController _yearAcademicController = TextEditingController();
+  final TextEditingController _yearAssessmentController = TextEditingController();
+  final TextEditingController _regIdStudentController = TextEditingController();
+  final TextEditingController _idAspectSubController = TextEditingController();
+  final TextEditingController _idCoachController = TextEditingController();
+  final TextEditingController _pointController = TextEditingController();
+  final TextEditingController _ketController = TextEditingController();
+  final TextEditingController _idAspectController = TextEditingController();
+  final TextEditingController _idPointRateController = TextEditingController();
   DateTime? _selectedDate;
-  String? _selectedType;
-  final List<String> _assessmentTypes = ['Quiz', 'Assignment', 'Project', 'Exam'];
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
+    _yearAcademicController.dispose();
+    _yearAssessmentController.dispose();
+    _regIdStudentController.dispose();
+    _idAspectSubController.dispose();
+    _idCoachController.dispose();
+    _pointController.dispose();
+    _ketController.dispose();
+    _idAspectController.dispose();
+    _idPointRateController.dispose();
     super.dispose();
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    final DateTime now = DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2025),
+      initialDate: now,
+      firstDate: DateTime(2020), // Set to a past year to avoid the assertion error
+      lastDate: DateTime(2025, 12, 31), // Set to end of 2025
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -46,6 +65,45 @@ class _AddAssessmentPageState extends State<AddAssessmentPage> {
       setState(() {
         _selectedDate = picked;
       });
+    }
+  }
+
+  Future<void> _saveAssessment() async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      
+      final response = await http.post(
+        Uri.parse('${Config.baseUrl}assessments'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'year_academic': _yearAcademicController.text,
+          'year_assessment': _yearAssessmentController.text,
+          'reg_id_student': _regIdStudentController.text,
+          'id_aspect_sub': _idAspectSubController.text,
+          'id_coach': _idCoachController.text,
+          'point': int.parse(_pointController.text),
+          'ket': _ketController.text,
+          'date_assessment': _selectedDate?.toIso8601String(),
+          'id_aspect': _idAspectController.text,
+          'id_point_rate': _idPointRateController.text
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Assessment berhasil dibuat')),
+        );
+        Navigator.pop(context);
+      } else {
+        throw Exception('Failed to create assessment');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
     }
   }
 
@@ -71,92 +129,60 @@ class _AddAssessmentPageState extends State<AddAssessmentPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: _titleController,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: InputDecoration(
-                  labelText: 'Assessment Title',
-                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.green),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter assessment title';
-                  }
-                  return null;
-                },
+              _buildTextField(
+                controller: _yearAcademicController,
+                labelText: 'Academic Year',
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter academic year' : null,
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                dropdownColor: const Color(0xFF1E1E1E),
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: InputDecoration(
-                  labelText: 'Assessment Type',
-                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.green),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
-                value: _selectedType,
-                items: _assessmentTypes.map((String type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(type),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedType = newValue;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select assessment type';
-                  }
-                  return null;
-                },
+              _buildTextField(
+                controller: _yearAssessmentController,
+                labelText: 'Assessment Year',
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter assessment year' : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: InputDecoration(
-                  labelText: 'Description',
-                  labelStyle: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.green),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
+              _buildTextField(
+                controller: _regIdStudentController,
+                labelText: 'Student ID',
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter student ID' : null,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _idAspectSubController,
+                labelText: 'Aspect Sub ID',
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter aspect sub ID' : null,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _idCoachController,
+                labelText: 'Coach ID',
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter coach ID' : null,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _pointController,
+                labelText: 'Point',
+                keyboardType: TextInputType.number,
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter point' : null,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _ketController,
+                labelText: 'Description',
                 maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter description';
-                  }
-                  return null;
-                },
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter description' : null,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _idAspectController,
+                labelText: 'Aspect ID',
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter aspect ID' : null,
+              ),
+              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _idPointRateController,
+                labelText: 'Point Rate ID',
+                validator: (value) => value?.isEmpty ?? true ? 'Please enter point rate ID' : null,
               ),
               const SizedBox(height: 12),
               Container(
@@ -168,8 +194,8 @@ class _AddAssessmentPageState extends State<AddAssessmentPage> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                   title: Text(
                     _selectedDate == null 
-                      ? 'Select Due Date'
-                      : 'Due Date: ${_selectedDate.toString().split(' ')[0]}',
+                      ? 'Select Assessment Date'
+                      : 'Assessment Date: ${_selectedDate.toString().split(' ')[0]}',
                     style: TextStyle(
                       fontSize: 13,
                       color: _selectedDate == null 
@@ -206,13 +232,10 @@ class _AddAssessmentPageState extends State<AddAssessmentPage> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate() && _selectedDate != null) {
-                        // TODO: Implement save assessment logic
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Processing Data')),
-                        );
+                        _saveAssessment();
                       } else if (_selectedDate == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please select due date')),
+                          const SnackBar(content: Text('Please select assessment date')),
                         );
                       }
                     },
@@ -236,6 +259,36 @@ class _AddAssessmentPageState extends State<AddAssessmentPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white, fontSize: 13),
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.green),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      validator: validator,
     );
   }
 }
