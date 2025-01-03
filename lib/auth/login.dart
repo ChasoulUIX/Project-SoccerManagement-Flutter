@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../app/dashboard.dart';
 import '../config.dart';
@@ -17,6 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _nohpController = TextEditingController();
+  final _storage = const FlutterSecureStorage();
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
@@ -32,12 +34,14 @@ class _LoginPageState extends State<LoginPage> {
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
-          
+
           if (data['success'] == true) {
-            // Save token
+            // Save JWT token and user data in secure storage
             final token = data['token'];
-            // TODO: Store token securely
-            
+            await _storage.write(key: 'jwt_token', value: token);
+            await _storage.write(key: 'user_email', value: _emailController.text);
+            await _storage.write(key: 'user_phone', value: _nohpController.text);
+
             if (!mounted) return;
             Navigator.pushReplacement(
               context,
@@ -75,7 +79,8 @@ class _LoginPageState extends State<LoginPage> {
         child: Center(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -95,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Welcome Text
                     const Text(
                       'Welcome Back',
@@ -121,14 +126,16 @@ class _LoginPageState extends State<LoginPage> {
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: 'Email',
-                        prefixIcon: Icon(Icons.email_outlined, color: Colors.grey[400], size: 20),
+                        prefixIcon: Icon(Icons.email_outlined,
+                            color: Colors.grey[400], size: 20),
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey[800]!),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.green, width: 2),
+                          borderSide:
+                              const BorderSide(color: Colors.green, width: 2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         fillColor: Colors.grey[900],
@@ -154,14 +161,16 @@ class _LoginPageState extends State<LoginPage> {
                       keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
                         hintText: 'Phone Number',
-                        prefixIcon: Icon(Icons.phone_outlined, color: Colors.grey[400], size: 20),
+                        prefixIcon: Icon(Icons.phone_outlined,
+                            color: Colors.grey[400], size: 20),
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey[800]!),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.green, width: 2),
+                          borderSide:
+                              const BorderSide(color: Colors.green, width: 2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         fillColor: Colors.grey[900],
@@ -218,9 +227,9 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Sign Up Option
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

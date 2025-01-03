@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../config.dart';
 import 'add/addschedule.dart';
 
 class SchedulePage extends StatefulWidget {
@@ -10,68 +13,127 @@ class SchedulePage extends StatefulWidget {
 }
 
 class _SchedulePageState extends State<SchedulePage> {
-  final List<Map<String, dynamic>> _schedules = [
-    {
-      'title': 'Basic Training',
-      'coach': 'Coach Ahmad',
-      'time': '09:00 - 10:30',
-      'location': 'Field A',
-      'participants': 12,
-      'status': 'Upcoming'
-    },
-    {
-      'title': 'Advanced Training',
-      'coach': 'Coach Sarah',
-      'time': '11:00 - 12:30',
-      'location': 'Field B',
-      'participants': 8,
-      'status': 'In Progress'
-    },
-    {
-      'title': 'Youth Training',
-      'coach': 'Coach Mike',
-      'time': '14:00 - 15:30',
-      'location': 'Field A',
-      'participants': 15,
-      'status': 'Upcoming'
-    }
-  ];
-
+  final _storage = const FlutterSecureStorage();
+  List<Map<String, dynamic>> _schedules = [];
   String _selectedDay = 'Today';
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSchedules();
+  }
+
+  Future<void> _loadSchedules() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) throw Exception('No auth token found');
+
+      final response = await http.get(
+        Uri.parse('${Config.baseUrl}schedules'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          setState(() {
+            _schedules = List<Map<String, dynamic>>.from(data['data']);
+            _isLoading = false;
+          });
+        } else {
+          throw Exception(data['message'] ?? 'Failed to load schedules');
+        }
+      } else {
+        throw Exception('Failed to load schedules');
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _deleteSchedule(String id) async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) throw Exception('No auth token found');
+
+      final response = await http.delete(
+        Uri.parse('${Config.baseUrl}schedules/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          _loadSchedules();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Schedule berhasil dihapus')),
+          );
+        } else {
+          throw Exception(data['message']);
+        }
+      } else {
+        throw Exception('Failed to delete schedule');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 12),
-                    _buildDaySelector(),
-                    const SizedBox(height: 12),
-                    _buildScheduleStats(),
-                  ],
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildScheduleCard(_schedules[index]),
-                  childCount: _schedules.length,
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!, style: const TextStyle(color: Colors.white)))
+                : CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildHeader(),
+                              const SizedBox(height: 12),
+                              _buildDaySelector(),
+                              const SizedBox(height: 12),
+                              _buildScheduleStats(),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => _buildScheduleCard(_schedules[index]),
+                            childCount: _schedules.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
       ),
     );
   }
@@ -185,6 +247,10 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildScheduleStats() {
+    final totalSchedules = _schedules.length;
+    final upcomingSchedules = _schedules.where((s) => s['status_schedule'] == 0).length;
+    final completedSchedules = _schedules.where((s) => s['status_schedule'] == 1).length;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -194,9 +260,9 @@ class _SchedulePageState extends State<SchedulePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('Total', '8', Icons.event),
-          _buildStatItem('Upcoming', '5', Icons.upcoming),
-          _buildStatItem('Completed', '3', Icons.check_circle),
+          _buildStatItem('Total', totalSchedules.toString(), Icons.event),
+          _buildStatItem('Upcoming', upcomingSchedules.toString(), Icons.upcoming),
+          _buildStatItem('Completed', completedSchedules.toString(), Icons.check_circle),
         ],
       ),
     );
@@ -227,72 +293,89 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildScheduleCard(Map<String, dynamic> schedule) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                schedule['title'],
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+    return Dismissible(
+      key: Key(schedule['id'].toString()),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Konfirmasi'),
+            content: const Text('Yakin ingin menghapus schedule ini?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Batal'),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: schedule['status'] == 'In Progress'
-                      ? Colors.orange.withOpacity(0.2)
-                      : Colors.green.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  schedule['status'],
-                  style: TextStyle(
-                    color: schedule['status'] == 'In Progress'
-                        ? Colors.orange
-                        : Colors.green,
-                    fontSize: 10,
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Hapus'),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (direction) {
+        _deleteSchedule(schedule['id'].toString());
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.delete, color: Colors.red),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  schedule['name_schedule'] ?? '',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _buildScheduleInfo(Icons.person, schedule['coach']),
-              const SizedBox(width: 12),
-              _buildScheduleInfo(Icons.access_time, schedule['time']),
-              const SizedBox(width: 12),
-              _buildScheduleInfo(Icons.location_on, schedule['location']),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.group, size: 14, color: Colors.white.withOpacity(0.7)),
-              const SizedBox(width: 4),
-              Text(
-                '${schedule['participants']} participants',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 10,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: schedule['status_schedule'] == 0
+                        ? Colors.orange.withOpacity(0.2)
+                        : Colors.green.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    schedule['status_schedule'] == 0 ? 'Upcoming' : 'Completed',
+                    style: TextStyle(
+                      color: schedule['status_schedule'] == 0
+                          ? Colors.orange
+                          : Colors.green,
+                      fontSize: 10,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildScheduleInfo(Icons.calendar_today, schedule['date_schedule'] ?? ''),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

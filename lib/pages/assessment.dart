@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
+import '../config.dart';
 import 'add/addassessment.dart';
 
 class AssessmentPage extends StatefulWidget {
@@ -10,65 +14,114 @@ class AssessmentPage extends StatefulWidget {
 }
 
 class _AssessmentPageState extends State<AssessmentPage> {
-  final List<Map<String, dynamic>> _assessments = [
-    {
-      'student': 'ChasoulUIX',
-      'date': '2024-01-15',
-      'category': 'Technical Skills',
-      'score': 85,
-      'notes': 'Good ball control and passing accuracy'
-    },
-    {
-      'student': 'Ahmad Rifai',
-      'date': '2024-01-14',
-      'category': 'Physical Fitness',
-      'score': 78,
-      'notes': 'Needs improvement in stamina'
-    },
-    {
-      'student': 'Alif Sulaeman',
-      'date': '2024-01-13',
-      'category': 'Tactical Understanding',
-      'score': 92,
-      'notes': 'Excellent game reading ability'
-    }
-  ];
-
+  final _storage = const FlutterSecureStorage();
+  List<Map<String, dynamic>> _assessments = [];
   String _selectedCategory = 'All';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAssessments();
+  }
+
+  Future<void> _loadAssessments() async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      
+      if (token != null) {
+        final response = await http.get(
+          Uri.parse('${Config.baseUrl}assessments'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          setState(() {
+            _assessments = List<Map<String, dynamic>>.from(data['data']);
+            _isLoading = false;
+          });
+        } else {
+          debugPrint('Failed to load assessments: ${response.statusCode}');
+          setState(() => _isLoading = false);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading assessments: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deleteAssessment(int id) async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      
+      if (token != null) {
+        final response = await http.delete(
+          Uri.parse('${Config.baseUrl}assessments/$id'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          _loadAssessments(); // Reload after delete
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Assessment berhasil dihapus')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menghapus assessment')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting assessment: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Terjadi kesalahan')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 12),
-                    _buildCategoryFilter(),
-                    const SizedBox(height: 12),
-                    _buildAssessmentStats(),
-                  ],
-                ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 12),
+                          _buildCategoryFilter(),
+                          const SizedBox(height: 12),
+                          _buildAssessmentStats(),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildAssessmentCard(_assessments[index]),
+                        childCount: _assessments.length,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildAssessmentCard(_assessments[index]),
-                  childCount: _assessments.length,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -76,27 +129,6 @@ class _AssessmentPageState extends State<AssessmentPage> {
   Widget _buildHeader() {
     return Column(
       children: [
-        // Row(
-        //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        //   children: [
-        //     const Text(
-        //       'Assessments',
-        //       style: TextStyle(
-        //         color: Colors.white,
-        //         fontSize: 20,
-        //         fontWeight: FontWeight.bold,
-        //       ),
-        //     ),
-        //     IconButton(
-        //       icon:
-        //           const Icon(Icons.filter_list, color: Colors.white, size: 20),
-        //       onPressed: () {
-        //         // Show filter options
-        //       },
-        //     ),
-        //   ],
-        // ),
-        // const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
@@ -152,7 +184,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
                       fullscreenDialog: false,
                       maintainState: true,
                     ),
-                  );
+                  ).then((_) => _loadAssessments());
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
@@ -208,6 +240,9 @@ class _AssessmentPageState extends State<AssessmentPage> {
   }
 
   Widget _buildAssessmentStats() {
+    final avgScore = _assessments.isEmpty 
+        ? 0.0
+        : _assessments.map((a) => (a['score'] ?? 0) as num).reduce((a, b) => a + b) / _assessments.length;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -217,12 +252,25 @@ class _AssessmentPageState extends State<AssessmentPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatColumn('Average', '85.0'),
-          _buildStatColumn('Total', '24'),
-          _buildStatColumn('Monthly', '8'),
+          _buildStatColumn('Average', avgScore.toStringAsFixed(1)),
+          _buildStatColumn('Total', _assessments.length.toString()),
+          _buildStatColumn('Monthly', _getMonthlyCount().toString()),
         ],
       ),
     );
+  }
+
+  int _getMonthlyCount() {
+    final now = DateTime.now();
+    return _assessments.where((a) {
+      if (a['date'] == null) return false;
+      try {
+        final date = DateTime.parse(a['date'].toString());
+        return date.year == now.year && date.month == now.month;
+      } catch (e) {
+        return false;
+      }
+    }).length;
   }
 
   Widget _buildStatColumn(String label, String value) {
@@ -250,33 +298,35 @@ class _AssessmentPageState extends State<AssessmentPage> {
 
   Widget _buildAssessmentCard(Map<String, dynamic> assessment) {
     return Dismissible(
-      key: UniqueKey(),
+      key: Key(assessment['id'].toString()),
       direction: DismissDirection.endToStart,
       confirmDismiss: (direction) async {
-        // Return false to prevent dismissal
-        return false;
+        return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Konfirmasi'),
+            content: const Text('Yakin ingin menghapus assessment ini?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(true);
+                  _deleteAssessment(assessment['id']);
+                },
+                child: const Text('Hapus'),
+              ),
+            ],
+          ),
+        );
       },
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20.0),
-        color: Colors.transparent,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
-              onPressed: () {
-                // Handle edit action
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                // Handle delete action
-              },
-            ),
-          ],
-        ),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -292,7 +342,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  assessment['student'],
+                  assessment['student_name'] ?? 'Unknown',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -324,7 +374,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
                     size: 12, color: Colors.white.withOpacity(0.7)),
                 const SizedBox(width: 4),
                 Text(
-                  assessment['category'],
+                  assessment['category'] ?? 'Unknown',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 11,
@@ -335,7 +385,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
                     size: 12, color: Colors.white.withOpacity(0.7)),
                 const SizedBox(width: 4),
                 Text(
-                  assessment['date'],
+                  assessment['date'] ?? 'Unknown',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 11,
@@ -345,7 +395,7 @@ class _AssessmentPageState extends State<AssessmentPage> {
             ),
             const SizedBox(height: 6),
             Text(
-              assessment['notes'],
+              assessment['notes'] ?? '',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.9),
                 fontSize: 12,

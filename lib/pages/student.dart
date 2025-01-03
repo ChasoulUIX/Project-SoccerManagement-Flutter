@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../config.dart';
 import 'add/addstudent.dart';
 
 class StudentManagementPage extends StatefulWidget {
@@ -10,75 +13,127 @@ class StudentManagementPage extends StatefulWidget {
 }
 
 class _StudentManagementPageState extends State<StudentManagementPage> {
-  final List<Map<String, dynamic>> _students = [
-    {
-      'name': 'ChasoulUIX',
-      'email': 'chasoul@gmail.com',
-      'course': 'Advanced Training',
-      'progress': 0.75,
-      'status': 'Active',
-      'avatar': 'https://i.pravatar.cc/150?img=1'
-    },
-    {
-      'name': 'Ahmad Rifai',
-      'email': 'ahmad.rifai@example.com',
-      'course': 'Basic Training',
-      'progress': 0.45,
-      'status': 'Active',
-      'avatar': 'https://i.pravatar.cc/150?img=2'
-    },
-    {
-      'name': 'Alif sulaeman',
-      'email': 'alif.sulaeman@example.com',
-      'course': 'Basic Training',
-      'progress': 0.45,
-      'status': 'Active',
-      'avatar': 'https://i.pravatar.cc/150?img=2'
-    },
-    {
-      'name': 'Arya wiguna',
-      'email': 'arya.wiguna@example.com',
-      'course': 'Basic Training',
-      'progress': 0.45,
-      'status': 'Active',
-      'avatar': 'https://i.pravatar.cc/150?img=2'
-    },
-  ];
-
+  final _storage = const FlutterSecureStorage();
+  List<Map<String, dynamic>> _students = [];
   String _searchQuery = '';
-  String _selectedFilter = 'All';
+  final String _selectedFilter = 'All';
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStudents();
+  }
+
+  Future<void> _loadStudents() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) {
+        throw Exception('No auth token found');
+      }
+
+      final response = await http.get(
+        Uri.parse('${Config.baseUrl}student'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          setState(() {
+            _students = List<Map<String, dynamic>>.from(data['data']);
+            _isLoading = false;
+          });
+        } else {
+          throw Exception(data['message'] ?? 'Failed to load students');
+        }
+      } else {
+        throw Exception('Failed to load students');
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _deleteStudent(String id) async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      if (token == null) throw Exception('No auth token found');
+
+      final response = await http.delete(
+        Uri.parse('${Config.baseUrl}student/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          _loadStudents();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Student berhasil dihapus')),
+          );
+        } else {
+          throw Exception(data['message']);
+        }
+      } else {
+        throw Exception('Failed to delete student');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    _buildSearchBar(),
-                    const SizedBox(height: 12),
-                    _buildQuickStats(),
-                  ],
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildStudentCard(_students[index]),
-                  childCount: _students.length,
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!, style: const TextStyle(color: Colors.white)))
+                : CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Column(
+                            children: [
+                              _buildSearchBar(),
+                              const SizedBox(height: 12),
+                              _buildQuickStats(),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => _buildStudentCard(_students[index]),
+                            childCount: _students.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
       ),
     );
   }
@@ -131,13 +186,13 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
               ),
             ],
           ),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddStudentPage()),
-                );
-              },
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddStudentPage()),
+              ).then((_) => _loadStudents());
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
@@ -158,11 +213,15 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
   }
 
   Widget _buildQuickStats() {
+    final totalStudents = _students.length;
+    final activeStudents = _students.where((s) => s['status'] == true).length;
+    final inactiveStudents = totalStudents - activeStudents;
+
     return Row(
       children: [
-        _buildStatItem('Total', '1,234', Colors.blue),
-        _buildStatItem('Active', '1,180', Colors.green),
-        _buildStatItem('Inactive', '54', Colors.red),
+        _buildStatItem('Total', totalStudents.toString(), Colors.blue),
+        _buildStatItem('Active', activeStudents.toString(), Colors.green),
+        _buildStatItem('Inactive', inactiveStudents.toString(), Colors.red),
       ],
     );
   }
@@ -213,7 +272,7 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundImage: NetworkImage(student['avatar']),
+            backgroundImage: NetworkImage(student['photo'] ?? 'https://i.pravatar.cc/150'),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -221,7 +280,7 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  student['name'],
+                  student['name'] ?? '',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -230,71 +289,81 @@ class _StudentManagementPageState extends State<StudentManagementPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  student['course'],
+                  student['email'] ?? '',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.5),
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 6),
-                Stack(
-                  children: [
-                    Container(
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(1.5),
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (student['status'] == true ? Colors.green : Colors.red).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    student['status'] == true ? 'Active' : 'Inactive',
+                    style: TextStyle(
+                      color: student['status'] == true ? Colors.green : Colors.red,
+                      fontSize: 11,
                     ),
-                    Container(
-                      height: 3,
-                      width: MediaQuery.of(context).size.width *
-                          0.3 *
-                          student['progress'],
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.green, Colors.green.shade300],
-                        ),
-                        borderRadius: BorderRadius.circular(1.5),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: Colors.white, size: 18),
+            icon: const Icon(Icons.more_vert, color: Colors.white, size: 18),
             color: const Color(0xFF1A1A1A),
             itemBuilder: (BuildContext context) => [
-              PopupMenuItem<String>(
+              const PopupMenuItem<String>(
                 value: 'edit',
                 child: Row(
                   children: [
                     Icon(Icons.edit, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text('Edit', style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
-              PopupMenuItem<String>(
+              const PopupMenuItem<String>(
                 value: 'delete',
                 child: Row(
                   children: [
                     Icon(Icons.delete, color: Colors.red, size: 18),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text('Delete', style: TextStyle(color: Colors.red)),
                   ],
                 ),
               ),
             ],
-            onSelected: (String value) {
+            onSelected: (String value) async {
               if (value == 'edit') {
                 // TODO: Implement edit functionality
                 print('Edit clicked for ${student['name']}');
               } else if (value == 'delete') {
-                // TODO: Implement delete functionality
-                print('Delete clicked for ${student['name']}');
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Konfirmasi'),
+                    content: const Text('Yakin ingin menghapus student ini?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Batal'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true) {
+                  await _deleteStudent(student['id_student'].toString());
+                }
               }
             },
           ),

@@ -1,0 +1,48 @@
+management login
+http://localhost:3001/api/auth/management/login
+
+crud 
+assessment
+http://localhost:3001/api/assessments post get
+http://localhost:3001/api/assessments/2 id delt put
+
+sett assessment
+http://localhost:3001/api/sett_assessments
+http://localhost:3001/api/sett_assessments/2 delete put
+
+aspects
+http://localhost:3001/api/aspects get post 
+http://localhost:3001/api/aspects/2 id delt put
+
+aspect_subs
+http://localhost:3001/api/aspect_subs get post
+http://localhost:3001/api/aspect_subs/2 id delt put
+
+coach
+http://localhost:3001/api/coach get post
+http://localhost:3001/api/coach/2 id delt put
+
+department
+http://localhost:3001/api/department get post
+http://localhost:3001/api/department/2 delt put
+
+information
+http://localhost:3001/api/information
+http://localhost:3001/api/information/2 delt putt
+
+management
+http://localhost:3001/api/management post get
+http://localhost:3001/api/management/2 delt put
+
+point rate
+http://localhost:3001/api/point_rate get post
+http://localhost:3001/api/point_rate/2 delt put
+
+scedhules
+http://localhost:3001/api/schedules
+http://localhost:3001/api/schedules/2 delet put
+
+student
+http://localhost:3001/api/student get push
+http://localhost:3001/api/student/2 delet put
+

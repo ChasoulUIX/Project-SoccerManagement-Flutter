@@ -1,8 +1,12 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import '../auth/login.dart';
+import '../config.dart';
 import '../pages/assessment.dart';
 import '../pages/notifikasi.dart';
 import '../pages/profile.dart';
@@ -10,6 +14,7 @@ import '../pages/schedule.dart';
 import '../pages/student.dart';
 import '../sidepages/aspect.dart';
 import '../sidepages/assessment.dart';
+
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -35,23 +40,72 @@ class _DashboardPageState extends State<DashboardPage>
     },
     {
       'title': 'Assessment',
-       'icon': Icons.assignment_rounded, 
-       'page': const AssessmentsidePage()},
+      'icon': Icons.assignment_rounded,
+      'page': const AssessmentsidePage()
+    },
     {'title': 'Coach', 'icon': Icons.sports_rounded},
     {'title': 'Department', 'icon': Icons.business_rounded},
     {'title': 'Information', 'icon': Icons.info_rounded},
     {'title': 'Point Rate', 'icon': Icons.star_rate_rounded},
     {'title': 'Schedule', 'icon': Icons.calendar_today_rounded},
     {'title': 'Student', 'icon': Icons.people_rounded},
-    {'title': 'Logout', 
-    'icon': Icons.logout_rounded,
-    'page': const LoginPage()},
+    {
+      'title': 'Logout',
+      'icon': Icons.logout_rounded,
+      'page': const LoginPage()
+    },
   ];
+
+  final _storage = const FlutterSecureStorage();
+  String _name = '';
+  String _gender = '';
+  String _dateBirth = '';
+  String _email = '';
+  String _nohp = '';
+  String _token = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+
+      if (token != null) {
+        final response = await http.get(
+          Uri.parse('${Config.baseUrl}management'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          if (responseData['success'] && responseData['data'].isNotEmpty) {
+            final userData = responseData['data'][0];
+            setState(() {
+              _name = userData['name'] ?? '';
+              _gender = userData['gender'] ?? '';
+              _dateBirth = userData['date_birth'] ?? '';
+              _email = userData['email'] ?? '';
+              _nohp = userData['nohp'] ?? '';
+              _token = token;
+            });
+          } else {
+            debugPrint('No user data found in response');
+          }
+        } else {
+          debugPrint('Failed to load user data: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading user data: $e');
+    }
   }
 
   @override
@@ -91,9 +145,9 @@ class _DashboardPageState extends State<DashboardPage>
                     controller: _tabController,
                     children: [
                       _buildOverviewTab(),
-                      AssessmentPage(), // Replace with actual Students page
-                      StudentManagementPage(), // Replace with actual Students page
-                      SchedulePage(), // Schedule
+                      const AssessmentPage(), // Replace with actual Students page
+                      const StudentManagementPage(), // Replace with actual Students page
+                      const SchedulePage(), // Schedule
                     ],
                   ),
                 ),
@@ -390,9 +444,9 @@ class _DashboardPageState extends State<DashboardPage>
                         fontSize: 14,
                       ),
                     ),
-                    const Text(
-                      'ChasoulUIX',
-                      style: TextStyle(
+                    Text(
+                      _name,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -408,18 +462,18 @@ class _DashboardPageState extends State<DashboardPage>
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.star,
                             color: Colors.amber,
                             size: 12,
                           ),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
-                            'Super Admin',
-                            style: TextStyle(
+                            _nohp,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -697,9 +751,9 @@ class _DashboardPageState extends State<DashboardPage>
     return Drawer(
       backgroundColor: Colors.transparent,
       child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
-          borderRadius: const BorderRadius.only(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.only(
             topRight: Radius.circular(24),
             bottomRight: Radius.circular(24),
           ),
@@ -783,9 +837,9 @@ class _DashboardPageState extends State<DashboardPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'ChasoulUIX',
-                    style: TextStyle(
+                  Text(
+                    _name,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -831,9 +885,17 @@ class _DashboardPageState extends State<DashboardPage>
       child: Material(
         color: Colors.transparent,
         child: ListTile(
-          onTap: () {
+          onTap: () async {
             Navigator.pop(context);
-            if (item['page'] != null) {
+            if (isLogout) {
+              await _storage.deleteAll();
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              }
+            } else if (item['page'] != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => item['page']),
